@@ -1,0 +1,222 @@
+---
+title: "Monitoring on a shoestring: Example report"
+output:
+  word_document:
+    toc: true
+---
+
+
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
+#Reading in libraries we will be using
+library(tidyverse)
+library(readxl)
+library(expss)
+library(summarytools)
+library(haven)
+library(janitor)
+library(lubridate)
+library(flextable)
+library(writexl)
+library(ggrepel)
+```
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+#Importing survey data
+survey_data <- read_excel("Survey responses.xlsx")
+```
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+#CLEANING
+# First I'll start by changing the column names of each data set so that we can use it
+col_names = c("timestamp", 
+               "satisfaction", 
+               "recommend", 
+               "enjoy_presentation", 
+               "best_part_presentation", 
+               "do_better", 
+               "presentation_gain_new_knowledge", 
+               "presentation_find_information_useful", 
+               "presentation_practical_strategies", 
+               "presentation_greater_understanding", 
+               "previous_aes")
+
+colnames(survey_data) <- col_names
+```
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+#CLEANING
+survey_data <- survey_data %>%
+  mutate(date = as_date(ymd_hms(timestamp, quiet = TRUE))) #Finding the date
+```
+
+# Introduction
+
+
+This is a report on presentation attendees satisfaction with the presentation **'Monitoring on a shoestring: How reproducible reporting can help make better use of data'**. The report presents data collected via survey responses completed by attendees.
+
+The tables and figures in this report have been generated automatically.
+
+The report was generated on **`r Sys.Date()`**. 
+
+## The data
+
+The survey data from this report is taken from the Bonnie's client satisfaction survey
+
+The reported includes data from survey responses collected on: **`r min(survey_data$date, na.rm = TRUE)`**.
+
+
+**`r nrow(survey_data)` ** participants completed the survey. 
+
+The below table shows the previous AES attendance of respondents.
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+survey_data |> 
+  group_by(previous_aes) |> 
+  rename('Previous AES attendance' = previous_aes) |> 
+  summarise(Count = n()) |> 
+  mutate(Proportion = Count / sum(Count)*100,
+         Proportion = paste0(Proportion, "%")) |>
+  knitr::kable(row.names = FALSE, caption = "Previous AES attendance of respondents", format = "pandoc", 
+               format.args = list(big.mark = ",",scientific = FALSE))
+```
+
+# Overall satisfaction
+
+Respondents were asked to give quick feedback on how satisfied they were with the presentation. 
+
+On average, they rated their satisfaction **`r round(mean(survey_data$satisfaction, na.rm = TRUE),2)` / 5 stars**.
+
+The proportion of respondents who gave the presentation 1, 2, 3, 4, or 5 stars is shown below.
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 6.5, fig.height = 3}
+survey_data %>%
+    ggplot(aes(x = satisfaction)) +
+    geom_histogram(colour = "black", fill = "#4CC4FF", binwidth = 1, center = 1, aes(y = (..count..)/sum(..count..))) + 
+    theme_classic() +
+    theme(text = element_text(size=11))+ 
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1L)) +
+    ylab("Percent of total") +
+    xlab("Satisfaction rating") +
+    labs(caption = paste("Report generated on:", Sys.Date()))
+```
+
+We also asked respondents if they would recommend the presentation to a friend or colleague.
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 6.5, fig.height = 3}
+survey_data %>%
+    ggplot(aes(x = recommend)) +
+    geom_histogram(colour = "black", fill = "#4CC4FF", binwidth = 1, center = 1, aes(y = (..count..)/sum(..count..))) + 
+    theme_classic() +
+    theme(text = element_text(size=11))+ 
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1L)) +
+    ylab("Percent of total") +
+    xlab("Would recommend the presentation to a colleague or friend") +
+    labs(caption = paste("Report generated on:", Sys.Date()))
+```
+
+
+
+## Satisfaction by previous AES attendance
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+pre_aes_mean <- survey_data |> 
+  filter(previous_aes == "Yes - I have been to an AES conference 1 or more times before") |> 
+  summarise(round(mean(satisfaction, na.rm = TRUE), 2))
+
+no_pre_aes_mean <- survey_data |> 
+  filter(previous_aes == "No - this is my first time") |> 
+  summarise(round(mean(satisfaction, na.rm = TRUE), 2))
+```
+
+We asked respondents if they had attended an AES conference before. We wanted to know if satisfaction with the presentation differed between those who had attended previously compared to those who had not. 
+
+On average, people who have attended at least 1 AES conference previously rated their satisfaction **`r pre_aes_mean` / 5 stars** and people who have not attended an AES conference before rated their satisfaction **`r no_pre_aes_mean` / 5 stars**.
+
+The below xyz
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+
+```
+
+
+# Detailed feedback
+
+In this section xyz.
+
+## What respondents enjoyed
+
+The graph below shows 
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8.5, fig.height = 4}
+pres_enjoy <- survey_data |>
+  separate_rows(enjoy_presentation, sep = ",") |>
+  mutate(response = str_trim(enjoy_presentation)) |> 
+  count(response, sort = TRUE, , name = "N") |> 
+  mutate(proportion = N / sum(N),
+         percent = proportion * 100)
+  
+ggplot(pres_enjoy, aes(x = percent, y = reorder(response, percent))) +
+  geom_col(fill = "#4CC4FF") +
+  geom_text(
+    aes(label = paste0(round(percent, 1), "% (n = ", N, ")")),
+    hjust = -0.1) +
+  labs(x = NULL, y = NULL) +
+   scale_x_continuous(
+    expand = expansion(mult = c(0, 0.25))) +
+  theme_classic() +
+  labs(caption = paste("Report generated on:", Sys.Date())) + 
+  theme(plot.caption = element_text(hjust = 0, size = 10, color = "black"))
+```
+
+
+## Takeaways from the presentation
+
+We asked respondents to rate how strongly they agreed with the below statements about takeaways from the presentation.
+
+Please note that labels for responses under 5% is not shown on this figure.
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8.5, fig.height = 4}
+survey_data %>%
+  select(starts_with("presentation")) %>% 
+  pivot_longer(cols = everything(), names_to = "q", values_to = "response") %>% filter(!is.na(response)) %>% 
+  mutate(response = fct_relevel(response, "Not applicable", "Don't know", "Strongly disagree", "Disagree", 
+                                "Neither agree nor disagree", "Agree", "Strongly agree")) %>%
+  group_by(q, response) %>%
+  tally() %>%
+  ungroup() %>%
+  group_by(q) %>%
+  mutate(pct = prop.table(n),
+         pct_round = round(pct*100)) %>%
+  mutate(q = case_when(
+    q == "presentation_find_information_useful" ~ "Participants gained new knowledge or insights",
+    q == "presentation_gain_new_knowledge" ~ "Participants found the information presented useful", 
+    q == "presentation_greater_understanding" ~ "The presentation provide practical strategies participants could use",
+    q == "presentation_practical_strategies" ~ "Participants left the presentation with a greater 
+                                              understanding of what they could do differently")) %>%
+  ungroup() %>%
+  mutate(q = fct_rev(q)) %>%
+  ggplot(aes(x = pct, y = q, fill = response)) + 
+  geom_bar(stat = "identity") + 
+  geom_text(aes(label = ifelse(pct_round < 5, "", paste0(pct_round, "%\n(n=", n, ")"))), 
+            position=position_stack(vjust=0.5), size = 3.5) + 
+  scale_fill_manual(values = c("grey", "#FF8000", "#FFC44C", "#FFEE99", "#99EEFF" , "#4CC4FF")) + 
+  scale_y_discrete(labels = scales::label_wrap(35), limits = rev(levels(survey_data$q))) + 
+  guides(fill = guide_legend(reverse = TRUE)) +
+  theme_classic() + 
+  theme(
+    text = element_text(size=15),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), 
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    legend.byrow = TRUE,
+    legend.text = element_text(size=15)
+  ) +
+  xlab("") + 
+  ylab("") + 
+  xlim(0,1) +
+  labs(caption = paste("Report generated on:", Sys.Date())) + 
+  theme(plot.caption = element_text(hjust = 0, size = 10, color = "black"))
+```
+
+
